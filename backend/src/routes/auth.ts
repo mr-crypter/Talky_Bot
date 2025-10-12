@@ -22,17 +22,17 @@ r.post('/signup', async (req, res) => {
   if (exists.rowCount) return res.status(409).json({ error: 'email_or_username_taken' })
 
   const hash = await bcrypt.hash(password, 10)
-  const user = (
-    await q('insert into users (email, username, password_hash, onboarded, credits) values ($1,$2,$3,false,2000) returning *', [
-      email,
-      username,
-      hash,
-    ])
-  ).rows[0]
+  const userRes = await q('insert into users (email, username, password_hash, onboarded, credits) values ($1,$2,$3,false,2000) returning *', [
+    email,
+    username,
+    hash,
+  ])
+  const user = userRes.rows[0]
+  if (!user) return res.status(500).json({ error: 'user_create_failed' })
 
-  const org = (
-    await q('insert into orgs (name, owner_id) values ($1,$2) returning *', [`${username} Org`, user.id])
-  ).rows[0]
+  const orgRes = await q('insert into orgs (name, owner_id) values ($1,$2) returning *', [`${username} Org`, user.id])
+  const org = orgRes.rows[0]
+  if (!org) return res.status(500).json({ error: 'org_create_failed' })
   await q('insert into user_org_roles (user_id, org_id, role) values ($1,$2,$3)', [user.id, org.id, 'admin'])
   await q('update users set active_org_id=$1 where id=$2', [org.id, user.id])
   await q('update users set onboarded=true where id=$1', [user.id])
