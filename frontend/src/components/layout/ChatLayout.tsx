@@ -1,8 +1,12 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { createSession, setActiveSession } from '../../features/chat/chatSlice'
+import { createSession, setActiveSession, fetchMessages } from '../../features/chat/chatSlice'
 import { togglePanel } from '../../features/notifications/notificationsSlice'
 import NotificationPanel from '../notifications/NotificationPanel'
+import { getSocket } from '../../lib/socket'
+import { pushNotification } from '../../features/notifications/notificationsSlice'
+import { fetchSessions } from '../../features/chat/chatSlice'
 
 export default function ChatLayout() {
   const dispatch = useAppDispatch()
@@ -10,6 +14,19 @@ export default function ChatLayout() {
   const activeId = useAppSelector((s) => s.chat.activeSessionId)
   const credits = useAppSelector((s) => s.auth.credits)
   const user = useAppSelector((s) => s.auth.user)
+
+  useEffect(() => {
+    dispatch(fetchSessions())
+    const socket = getSocket()
+    if (!socket.connected) socket.connect()
+    socket.off('notification')
+    socket.on('notification', (n: { id: string; title: string; body?: string; created_at?: string }) => {
+      dispatch(pushNotification(n.title, n.body))
+    })
+    return () => {
+      socket.off('notification')
+    }
+  }, [dispatch])
 
   return (
     <div className="h-dvh grid grid-cols-[300px_1fr] grid-rows-[64px_1fr] bg-white">
@@ -73,7 +90,13 @@ export default function ChatLayout() {
             {sessions.map((s) => (
               <button
                 key={s.id}
-                onClick={() => dispatch(setActiveSession(s.id))}
+                onClick={() => {
+                  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s.id)) {
+                    return
+                  }
+                  dispatch(setActiveSession(s.id))
+                  dispatch(fetchMessages(s.id))
+                }}
                 className={`w-full text-left px-3 py-2 rounded ${activeId === s.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-neutral-100'} transition`}
               >
                 <div className="truncate">{s.title}</div>

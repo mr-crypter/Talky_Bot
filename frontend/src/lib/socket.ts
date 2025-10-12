@@ -6,7 +6,8 @@ export function getSocket(): Socket {
   if (!socket) {
     socket = io(import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000', {
       autoConnect: false,
-      transports: ['websocket'],
+      // Allow fallback to polling if websocket is blocked
+      transports: ['websocket', 'polling'],
       withCredentials: true,
       auth: () => {
         const token = localStorage.getItem('token')

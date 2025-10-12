@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { q } from '../config/db.js'
-import { signJwt } from '../middleware/auth.js'
+import { requireAuth, signJwt } from '../middleware/auth.js'
 import passport from '../config/passport.js'
 
 const r = Router()
@@ -63,5 +63,13 @@ r.get(
 )
 
 export default r
+
+// Authenticated user profile
+r.get('/me', requireAuth, async (req, res) => {
+  const uid = (req as any).user.id as string
+  const u = (await q('select id, email, username, credits from users where id=$1', [uid])).rows[0]
+  if (!u) return res.status(404).json({ error: 'not_found' })
+  res.json({ user: { id: u.id, email: u.email, username: u.username }, credits: u.credits })
+})
 
 

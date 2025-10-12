@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../lib/api'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show1, setShow1] = useState(false)
@@ -15,7 +17,13 @@ export default function Signup() {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!valid || !match) return
-    navigate('/login')
+    // Backend signup
+    api
+      .post('/auth/signup', { email, username, password })
+      .then((r) => {
+        localStorage.setItem('token', r.data.token)
+        navigate('/login')
+      })
   }
 
   return (
@@ -24,12 +32,20 @@ export default function Signup() {
         <h1 className="text-2xl font-semibold text-center">Sign Up</h1>
         <p className="text-center text-neutral-500 mt-1 mb-6">Create an account to get started</p>
 
-        <label className="block text-sm font-medium mb-1">Username</label>
+        <label className="block text-sm font-medium mb-1">Email</label>
+        <input
+          className="w-full mb-1 px-3 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <label className="block text-sm font-medium mt-3 mb-1">Username</label>
         <input
           className="w-full mb-1 px-3 py-2 rounded-lg border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
           placeholder="Choose a username"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
         />
 
         <label className="block text-sm font-medium mt-3 mb-1">Password</label>

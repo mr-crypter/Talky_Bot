@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { q } from '../config/db.js'
 import { generateReply } from '../services/llm.js'
 import { applyUsage, requireCredits } from '../services/credits.js'
+import { validate as uuidValidate } from 'uuid'
 
 const r = Router()
 r.use(requireAuth)
@@ -25,6 +26,7 @@ r.post('/sessions', async (req, res) => {
 r.get('/sessions/:id/messages', async (req, res) => {
   const uid = (req as any).user.id as string
   const { id } = req.params
+  if (!uuidValidate(id)) return res.status(400).json({ error: 'invalid_session_id' })
   const ok = await q('select 1 from chat_sessions where id=$1 and user_id=$2', [id, uid])
   if (!ok.rowCount) return res.status(404).json({ error: 'not_found' })
   const msgs = (await q('select * from chat_messages where session_id=$1 order by created_at asc', [id])).rows
@@ -35,6 +37,7 @@ r.post('/sessions/:id/message', async (req, res) => {
   const uid = (req as any).user.id as string
   const { id } = req.params
   const { content } = req.body as { content: string }
+  if (!uuidValidate(id)) return res.status(400).json({ error: 'invalid_session_id' })
 
   const ok = await q('select 1 from chat_sessions where id=$1 and user_id=$2', [id, uid])
   if (!ok.rowCount) return res.status(404).json({ error: 'not_found' })

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { assistantMessage, createSession, setIsSending, userMessage } from '../../features/chat/chatSlice'
-import { deductCredits } from '../../features/auth/authSlice'
+import { setIsSending, userMessage, createSessionApi, sendMessageApi } from '../../features/chat/chatSlice'
 
 export default function ChatView() {
   const dispatch = useAppDispatch()
@@ -10,29 +10,36 @@ export default function ChatView() {
   const [input, setInput] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
-  const session = useMemo(() => sessions.find((s) => s.id === activeSessionId) ?? null, [sessions, activeSessionId])
+  const session = useMemo(() => sessions.find((s) => s.id === activeSessionId) ?? sessions[0] ?? null, [sessions, activeSessionId])
+  const messages = session?.messages ?? []
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
-  }, [session?.messages.length])
+  }, [messages.length])
 
   const send = async (content?: string) => {
     const text = (content ?? input).trim()
     if (!text || isSending) return
-    if (!session) dispatch(createSession('New Chat'))
-    const id = activeSessionId || (sessions[0]?.id ?? '')
-    const targetId = id || sessions[0]?.id
+    let targetId = activeSessionId || sessions[0]?.id
+    if (!session && !targetId) {
+      const res = await dispatch(createSessionApi('New Chat')).unwrap()
+      targetId = res.id
+    }
+    // If targetId is not a UUID (legacy local id), create server session
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId)) {
+      const res = await dispatch(createSessionApi('New Chat')).unwrap()
+      targetId = res.id
+    }
     if (!targetId) return
     dispatch(userMessage(targetId, text))
+    // Ensure we have messages array before relying on UI
     if (!content) setInput('')
     dispatch(setIsSending(true))
-    dispatch(deductCredits(1))
-
-    // Placeholder assistant reply
-    setTimeout(() => {
-      dispatch(assistantMessage(targetId, 'Great question! Let me break this down for you... This is a mock response to demonstrate the chat functionality. In a real application, this would be connected to an actual AI service.'))
-      dispatch(setIsSending(false))
-    }, 600)
+    const result = await dispatch(sendMessageApi({ sessionId: targetId, content: text }))
+    if (sendMessageApi.rejected.match(result)) {
+      // insufficient credits or failure
+      // no-op UI; the typing indicator will stop
+    }
   }
 
   const handleSuggestion = (prompt: string) => {
@@ -42,7 +49,7 @@ export default function ChatView() {
   return (
     <div className="h-full flex flex-col">
       <div ref={listRef} className="flex-1 overflow-y-auto">
-        {!session || session.messages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="h-full grid place-items-center">
             <div className="text-center px-4">
               <div className="mx-auto h-12 w-12 rounded-full grid place-items-center bg-indigo-50 text-indigo-600">
@@ -79,10 +86,16 @@ export default function ChatView() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4 max-w-3xl mx-auto p-6">
-            {session.messages.map((m) => (
+          <div className="space-y-4 max-w-3xl mx-auto p-4 sm:p-6">
+            {messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`px-4 py-2 rounded-2xl shadow ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white'} max-w-[80%]`}>{m.content}</div>
+                <div className={`px-4 py-2 rounded-2xl shadow ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white'} max-w-[90%] sm:max-w-[80%] prose prose-sm ${m.role === 'user' ? 'prose-invert' : ''}`}>
+                  {m.role === 'assistant' ? (
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                  ) : (
+                    <div>{m.content}</div>
+                  )}
+                </div>
               </div>
             ))}
             {isSending && (
@@ -105,23 +118,30 @@ export default function ChatView() {
           </div>
         )}
       </div>
-      <div className="border-t p-6 bg-white">
+      <div className="border-t p-3 sm:p-6 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-center">
-            <div className="flex-1 h-12 rounded-full border shadow-sm bg-white grid grid-cols-[1fr_48px] overflow-hidden">
-              <input
-                className="px-5 outline-none"
+            <div className="flex-1 h-auto rounded-full border shadow-sm bg-white grid grid-cols-[1fr_56px] sm:grid-cols-[1fr_48px] overflow-hidden">
+              <textarea
+                className="px-4 sm:px-5 py-3 outline-none text-sm sm:text-base resize-none min-h-12 max-h-40"
                 placeholder={credits > 0 ? 'Ask me anything...' : 'Out of credits'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    void send()
+                  }
+                }}
                 disabled={credits <= 0}
+                rows={1}
               />
-              <button onClick={send} disabled={credits <= 0 || isSending} className="h-full bg-indigo-600 text-white disabled:opacity-50 grid place-items-center">
+              <button onClick={() => send()} disabled={credits <= 0 || isSending} className="h-full bg-indigo-600 text-white disabled:opacity-50 grid place-items-center">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 2L11 13" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2l-7 20-4-9-9-4 20-7Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-500">
+          <div className="mt-2 flex items-center justify-between text-[10px] sm:text-[11px] text-neutral-500">
             <div>Press Enter to send, Shift+Enter for new line</div>
             <div>{input.length}/2000</div>
           </div>
