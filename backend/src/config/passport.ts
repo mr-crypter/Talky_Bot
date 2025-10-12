@@ -32,6 +32,7 @@ passport.use(
           if (org) {
             await q('insert into user_org_roles (user_id, org_id, role) values ($1,$2,$3)', [user.id, org.id, 'admin'])
             await q('update users set active_org_id=$1 where id=$2', [org.id, user.id])
+            await q('update users set onboarded=true where id=$1', [user.id])
           }
         }
         done(null, { id: user.id, email: user.email })

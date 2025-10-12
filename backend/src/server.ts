@@ -4,6 +4,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import http from 'http'
+import compression from 'compression'
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
 import notifRoutes from './routes/notifications.js'
@@ -13,6 +14,7 @@ import { initSocket } from './socket/index.js'
 const app = express()
 app.use(helmet())
 app.use(cors({ origin: process.env.CORS_ORIGIN as string, credentials: true }))
+app.use(compression())
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 

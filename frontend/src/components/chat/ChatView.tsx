@@ -53,8 +53,22 @@ export default function ChatView() {
     }
   }
 
-  const handleSuggestion = (prompt: string) => {
-    void send(prompt)
+  const handleSuggestion = async (prompt: string) => {
+    const text = prompt.trim()
+    if (!text || isSending) return
+    // Always create a fresh session for suggestion
+    const created = await dispatch(createSessionApi(text.slice(0, 40))).unwrap()
+    const targetId = created.id
+    dispatch(userMessage(targetId, text))
+    dispatch(setIsSending(true))
+    const result = await dispatch(sendMessageApi({ sessionId: targetId, content: text }))
+    if (sendMessageApi.fulfilled.match(result)) {
+      const creditsVal = (result.payload as any).credits as number | undefined
+      if (typeof creditsVal === 'number') {
+        const { setCredits } = await import('../../features/auth/authSlice')
+        dispatch(setCredits(creditsVal))
+      }
+    }
   }
 
   const handleCopy = async (id: string, text: string) => {
@@ -82,7 +96,7 @@ export default function ChatView() {
               <p className="mt-1 text-neutral-500 max-w-2xl">
                 Start a conversation with our AI assistant. Ask questions, get help with tasks, or explore ideas together.
               </p>
-              <div className="mt-6 grid grid-cols-2 gap-3 max-w-3xl mx-auto">
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl mx-auto w-full px-4">
                 {[
                   'Explain quantum computing in simple terms',
                   'Write a Python function to sort a list',
@@ -92,16 +106,16 @@ export default function ChatView() {
                   <button
                     key={t}
                     onClick={() => handleSuggestion(t)}
-                    className="text-left px-4 py-3 rounded-full border bg-white hover:bg-neutral-50 shadow-sm"
+                    className="w-full text-left px-4 py-3 rounded-full border bg-white hover:bg-neutral-50 shadow-sm overflow-hidden"
                   >
-                    <div className="flex items-center gap-2 text-sm text-neutral-700">
+                    <div className="flex items-center gap-2 text-sm text-neutral-700 w-full min-w-0">
                       <span className="h-5 w-5 grid place-items-center text-indigo-600">
                         {/* chat bubble icon */}
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                           <path d="M21 12a7 7 0 0 1-7 7H9l-4 4v-4H6a7 7 0 0 1-7-7 7 7 0 0 1 7-7h8a7 7 0 0 1 7 7Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </span>
-                      <span>{t}</span>
+                      <span className="flex-1 min-w-0 break-words whitespace-normal leading-snug">{t}</span>
                     </div>
                   </button>
                 ))}
@@ -121,7 +135,7 @@ export default function ChatView() {
                     )}
                   </div>
                   {m.role === 'assistant' && (
-                    <div className="mt-2 ml-2 flex items-center gap-5 text-indigo-600">
+                    <div className="mt-2 ml-2 flex items-center gap-5 text-indigo-600 transition-opacity duration-150">
                       <button
                         aria-label={copiedMap[m.id] ? 'Copied' : 'Copy'}
                         className={`inline-flex items-center hover:opacity-80 ${copiedMap[m.id] ? 'text-emerald-600' : 'text-indigo-600'}`}
@@ -138,14 +152,20 @@ export default function ChatView() {
                         className={`inline-flex items-center hover:opacity-80 ${voteMap[m.id] === 'up' ? 'text-emerald-600' : 'text-indigo-600'}`}
                         onClick={() => handleVote(m.id, 'up')}
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 9V5a3 3 0 0 0-3-3l-3 9H5a3 3 0 0 0-3 3v1a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M7 10v12"></path>
+                          <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"></path>
+                        </svg>
                       </button>
                       <button
                         aria-label="Downvote"
                         className={`inline-flex items-center hover:opacity-80 ${voteMap[m.id] === 'down' ? 'text-rose-600' : 'text-indigo-600'}`}
                         onClick={() => handleVote(m.id, 'down')}
                       >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 15v4a3 3 0 0 0 3 3l3-9h3a3 3 0 0 0 3-3v-1a3 3 0 0 0-3-3H12a3 3 0 0 0-3 3v6z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17 14V2"></path>
+                          <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z"></path>
+                        </svg>
                       </button>
                       <button aria-label="More actions" className="hover:opacity-80">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>

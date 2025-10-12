@@ -52,6 +52,9 @@ const notificationsSlice = createSlice({
     togglePanel: (state, action?: PayloadAction<boolean | undefined>) => {
       state.panelOpen = action?.payload ?? !state.panelOpen
     },
+    setPanelOpen: (state, action: PayloadAction<boolean>) => {
+      state.panelOpen = action.payload
+    },
     markAllRead: (state) => {
       state.list.forEach((n) => (n.read = true))
       persist(state)
@@ -63,7 +66,7 @@ const notificationsSlice = createSlice({
   },
 })
 
-export const { pushNotification, markRead, togglePanel, markAllRead, clearAll } = notificationsSlice.actions
+export const { pushNotification, markRead, togglePanel, setPanelOpen, markAllRead, clearAll } = notificationsSlice.actions
 export default notificationsSlice.reducer
 
 

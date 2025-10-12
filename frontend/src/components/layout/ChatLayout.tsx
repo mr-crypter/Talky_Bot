@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet, Link } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { createSession, setActiveSession, fetchMessages } from '../../features/chat/chatSlice'
-import { togglePanel } from '../../features/notifications/notificationsSlice'
+import { togglePanel, setPanelOpen } from '../../features/notifications/notificationsSlice'
 import NotificationPanel from '../notifications/NotificationPanel'
 import { getSocket } from '../../lib/socket'
 import { pushNotification } from '../../features/notifications/notificationsSlice'
@@ -29,6 +29,8 @@ export default function ChatLayout() {
 
   useEffect(() => {
     dispatch(fetchSessions())
+    // Ensure notification panel starts closed on load
+    dispatch(setPanelOpen(false))
     const socket = getSocket()
     if (!socket.connected) socket.connect()
     socket.off('notification')
@@ -44,7 +46,9 @@ export default function ChatLayout() {
     <div className={`relative h-dvh grid ${collapsed ? 'grid-cols-[0_1fr]' : 'grid-cols-[300px_1fr]'} grid-rows-[64px_1fr] bg-white transition-[grid-template-columns] duration-300 ease-in-out`}>
       {/* Top bar */}
       <header className="col-span-2 flex items-center justify-between gap-4 px-4 border-b bg-white sticky top-0 h-16 z-40">
-        <div className="font-semibold">AI Chat</div>
+        <Link to="/" className="font-semibold hover:text-indigo-600 transition-colors cursor-pointer select-none">
+          AI Chat
+        </Link>
         <div className="flex items-center gap-3">
           <div className="inline-flex items-center gap-2 text-sm px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">

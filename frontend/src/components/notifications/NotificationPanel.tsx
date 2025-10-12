@@ -1,9 +1,30 @@
+import { useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { markAllRead, markRead, togglePanel } from '../../features/notifications/notificationsSlice'
+import { api } from '../../lib/api'
 
 export default function NotificationPanel() {
   const { list, panelOpen } = useAppSelector((s) => s.notifications)
   const dispatch = useAppDispatch()
+  useEffect(() => {
+    if (!panelOpen) return
+    ;(async () => {
+      try {
+        const { data } = await api.get('/notifications')
+        // Merge server history with existing (simple prepend for demo)
+        // Avoid duplicates by id
+        for (const n of data as any[]) {
+          // pushNotification expects (title, body, variant)
+          // do not add duplicates
+          if (!list.find((x) => x.id === n.id)) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+            dispatch({ type: 'notifications/pushNotification', payload: { id: n.id, title: n.title, body: n.body, createdAt: new Date(n.created_at).getTime(), read: false, variant: 'info' } })
+          }
+        }
+      } catch {}
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelOpen])
   if (!panelOpen) return null
 
   return (
@@ -11,8 +32,8 @@ export default function NotificationPanel() {
       <div className="flex items-center justify-between px-2 py-1">
         <div className="font-medium">Notifications</div>
         <div className="flex items-center gap-3">
-          <button className="text-sm text-indigo-600" onClick={() => dispatch(markAllRead())}>Mark all read</button>
-          <button className="text-sm text-neutral-500" onClick={() => dispatch(togglePanel(false))}>Close</button>
+          <button className="text-sm text-indigo-600" onClick={() => dispatch(markAllRead(undefined))}>Mark all read</button>
+          <button className="text-sm text-neutral-500" onClick={() => dispatch(togglePanel(undefined))}>Close</button>
         </div>
       </div>
       <div className="max-h-[60vh] overflow-y-auto mt-2 space-y-2">

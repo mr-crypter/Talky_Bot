@@ -10,11 +10,22 @@ r.get('/', async (req, res) => {
   const uid = (req as any).user.id as string
   const orgs = (
     await q(
-      `select o.id, o.name,
-              json_agg(json_build_object('id', u.id, 'email', u.email, 'role', r.role) order by u.email) as members
+      `with members as (
+         select r.org_id, json_build_object('id', u.id, 'email', u.email, 'role', r.role) as m
+         from user_org_roles r
+         join users u on u.id = r.user_id
+       ), invites as (
+         select i.org_id, json_build_object('id', i.id, 'email', i.email, 'role', 'invited') as m
+         from org_invites i
+       )
+       select o.id, o.name,
+         json_agg(mm.m order by (mm.m->>'email')) as members
        from orgs o
-       join user_org_roles r on r.org_id = o.id
-       join users u on u.id = r.user_id
+       join (
+         select * from members
+         union all
+         select * from invites
+       ) mm on mm.org_id = o.id
        where exists(select 1 from user_org_roles r2 where r2.user_id=$1 and r2.org_id=o.id)
        group by o.id, o.name
        order by o.created_at desc`,
@@ -40,7 +51,7 @@ r.post('/:id/rename', async (req, res) => {
   const uid = (req as any).user.id as string
   const id = req.params.id
   const name = (req.body?.name as string) || 'Organization'
-  const ok = await q('select 1 from user_org_roles where user_id=$1 and org_id=$2 and role in (\'admin\',\'owner\')', [uid, id])
+  const ok = await q("select 1 from user_org_roles where user_id=$1 and org_id=$2 and role = 'admin'", [uid, id])
   if (!ok.rowCount) return res.status(403).json({ error: 'forbidden' })
   await q('update orgs set name=$1 where id=$2', [name, id])
   res.json({ ok: true })
@@ -52,7 +63,7 @@ r.post('/:id/invite', async (req, res) => {
   const schema = z.object({ email: z.string().email() })
   const parsed = schema.safeParse(req.body)
   if (!parsed.success) return res.status(400).json(parsed.error.flatten())
-  const ok = await q('select 1 from user_org_roles where user_id=$1 and org_id=$2 and role in (\'admin\',\'owner\')', [uid, id])
+  const ok = await q("select 1 from user_org_roles where user_id=$1 and org_id=$2 and role = 'admin'", [uid, id])
   if (!ok.rowCount) return res.status(403).json({ error: 'forbidden' })
   const inv = (
     await q('insert into org_invites (org_id, email, invited_by) values ($1,$2,$3) returning *', [id, parsed.data.email, uid])
