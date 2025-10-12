@@ -75,6 +75,18 @@ r.post('/:id/members/:memberId/role', async (req, res) => {
   const uid = (req as any).user.id as string
   const { id, memberId } = req.params
   const { role } = req.body as { role: 'admin' | 'member' }
+  // If modifying own role
+  if (memberId === uid) {
+    if (role !== 'admin') return res.status(400).json({ error: 'cannot_modify_own_role' })
+    // Break-glass: allow restoring self to admin only if no admins exist
+    const admins = await q<{ count: string }>("select count(*) from user_org_roles where org_id=$1 and role='admin'", [id])
+    if (Number(admins.rows[0]?.count ?? 0) === 0) {
+      await q('update user_org_roles set role=$1 where user_id=$2 and org_id=$3', [role, memberId, id])
+      return res.json({ ok: true, restored: true })
+    }
+    return res.status(400).json({ error: 'cannot_modify_own_role' })
+  }
+  // Modifying others requires admin
   const ok = await q("select 1 from user_org_roles where user_id=$1 and org_id=$2 and role = 'admin'", [uid, id])
   if (!ok.rowCount) return res.status(403).json({ error: 'forbidden' })
   await q('update user_org_roles set role=$1 where user_id=$2 and org_id=$3', [role, memberId, id])
@@ -84,6 +96,7 @@ r.post('/:id/members/:memberId/role', async (req, res) => {
 r.delete('/:id/members/:memberId', async (req, res) => {
   const uid = (req as any).user.id as string
   const { id, memberId } = req.params
+  if (memberId === uid) return res.status(400).json({ error: 'cannot_remove_self' })
   const ok = await q("select 1 from user_org_roles where user_id=$1 and org_id=$2 and role = 'admin'", [uid, id])
   if (!ok.rowCount) return res.status(403).json({ error: 'forbidden' })
   await q('delete from user_org_roles where user_id=$1 and org_id=$2', [memberId, id])

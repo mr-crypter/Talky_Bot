@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
-import cors, { CorsOptions } from 'cors'
+import cors from 'cors'
+import type { CorsOptions } from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
 import http from 'http'
