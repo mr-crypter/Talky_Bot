@@ -26,4 +26,18 @@ r.post('/send', async (req, res) => {
 
 export default r
 
+// mark single notification read
+r.post('/:id/read', async (req, res) => {
+  const uid = (req as any).user.id as string
+  const { id } = req.params as { id: string }
+  await q('update notifications set seen=true where id=$1 and (user_id=$2 or user_id is null)', [id, uid])
+  res.json({ ok: true })
+})
+
+// mark all read for user
+r.post('/read-all', async (req, res) => {
+  const uid = (req as any).user.id as string
+  await q('update notifications set seen=true where user_id=$1', [uid])
+  res.json({ ok: true })
+})
 

@@ -32,7 +32,10 @@ export default function NotificationPanel() {
       <div className="flex items-center justify-between px-2 py-1">
         <div className="font-medium">Notifications</div>
         <div className="flex items-center gap-3">
-          <button className="text-sm text-indigo-600" onClick={() => dispatch(markAllRead(undefined))}>Mark all read</button>
+          <button
+            className="text-sm text-indigo-600"
+            onClick={async () => { try { await api.post('/notifications/read-all') } catch {} dispatch(markAllRead(undefined)) }}
+          >Mark all read</button>
           <button className="text-sm text-neutral-500" onClick={() => dispatch(togglePanel(undefined))}>Close</button>
         </div>
       </div>
@@ -51,7 +54,7 @@ export default function NotificationPanel() {
                 {!n.read && (
                   <div className="mt-1 flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-indigo-600"></span>
-                    <button className="text-xs text-indigo-600" onClick={() => dispatch(markRead(n.id))}>Mark read</button>
+                    <button className="text-xs text-indigo-600" onClick={async () => { try { await api.post(`/notifications/${n.id}/read`) } catch {} dispatch(markRead(n.id)) }}>Mark read</button>
                   </div>
                 )}
               </div>

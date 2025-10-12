@@ -71,6 +71,25 @@ r.post('/:id/invite', async (req, res) => {
   res.json(inv)
 })
 
+r.post('/:id/members/:memberId/role', async (req, res) => {
+  const uid = (req as any).user.id as string
+  const { id, memberId } = req.params
+  const { role } = req.body as { role: 'admin' | 'member' }
+  const ok = await q("select 1 from user_org_roles where user_id=$1 and org_id=$2 and role = 'admin'", [uid, id])
+  if (!ok.rowCount) return res.status(403).json({ error: 'forbidden' })
+  await q('update user_org_roles set role=$1 where user_id=$2 and org_id=$3', [role, memberId, id])
+  res.json({ ok: true })
+})
+
+r.delete('/:id/members/:memberId', async (req, res) => {
+  const uid = (req as any).user.id as string
+  const { id, memberId } = req.params
+  const ok = await q("select 1 from user_org_roles where user_id=$1 and org_id=$2 and role = 'admin'", [uid, id])
+  if (!ok.rowCount) return res.status(403).json({ error: 'forbidden' })
+  await q('delete from user_org_roles where user_id=$1 and org_id=$2', [memberId, id])
+  res.json({ ok: true })
+})
+
 r.post('/active', async (req, res) => {
   const uid = (req as any).user.id as string
   const { orgId } = req.body as { orgId: string }

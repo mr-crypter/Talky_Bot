@@ -7,6 +7,7 @@ import NotificationPanel from '../notifications/NotificationPanel'
 import { getSocket } from '../../lib/socket'
 import { pushNotification } from '../../features/notifications/notificationsSlice'
 import { fetchSessions } from '../../features/chat/chatSlice'
+import { loadOrgs, setActiveOrgApi } from '../../features/orgs/orgsSlice'
 
 export default function ChatLayout() {
   const dispatch = useAppDispatch()
@@ -17,11 +18,16 @@ export default function ChatLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [orgOpen, setOrgOpen] = useState(false)
+  const orgRef = useRef<HTMLDivElement>(null)
+  const orgs = useAppSelector((s) => s.orgs.list)
+  const activeOrgId = useAppSelector((s) => s.orgs.activeOrgId)
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!menuRef.current) return
       if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+      if (orgRef.current && !orgRef.current.contains(e.target as Node)) setOrgOpen(false)
     }
     document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
@@ -31,6 +37,8 @@ export default function ChatLayout() {
     dispatch(fetchSessions())
     // Ensure notification panel starts closed on load
     dispatch(setPanelOpen(false))
+    // Load organizations to enable quick switcher
+    dispatch(loadOrgs())
     const socket = getSocket()
     if (!socket.connected) socket.connect()
     socket.off('notification')
@@ -114,14 +122,31 @@ export default function ChatLayout() {
           <span className="inline-grid place-items-center h-6 w-6 rounded bg-white/20">+</span>
           <span className="font-medium">New Chat</span>
         </button>
-        <button className="w-full mb-4 inline-flex items-center justify-center gap-2 h-10 rounded-lg border hover:bg-neutral-100 shadow">
-          <Link to="/orgs" className="flex items-center w-full h-full justify-center gap-2">
-            <span className="inline-grid place-items-center h-6 w-6 rounded bg-white/20">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 15l-6-6-6 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <div ref={orgRef} className="mb-4">
+          <button
+            onClick={() => setOrgOpen((v) => !v)}
+            className="w-full inline-flex items-center justify-between gap-2 h-10 px-3 rounded-lg border border-neutral-200 hover:bg-neutral-100 text-neutral-700 transition-colors"
+          >
+            <span className="text-sm font-medium truncate">{orgs.find((o) => o.id === activeOrgId)?.name ?? 'Organizations'}</span>
+            <span className="inline-grid place-items-center h-6 w-6 rounded">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-neutral-500"><path d="M18 15l-6-6-6 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </span>
-            <span className="font-medium">Organizations</span>
-          </Link>
-        </button>
+          </button>
+          {orgOpen && (
+            <div className="mt-2 rounded-lg border border-neutral-200 bg-white shadow-sm p-1 space-y-1">
+              {orgs.map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => { setOrgOpen(false); dispatch(setActiveOrgApi(o.id)) }}
+                  className={`w-full text-left px-3 py-2 rounded text-sm ${activeOrgId === o.id ? 'bg-indigo-50 text-indigo-700' : 'text-neutral-700 hover:bg-neutral-100'}`}
+                >
+                  {o.name}
+                </button>
+              ))}
+              <Link to="/orgs" className="block text-center text-sm text-indigo-600 hover:underline mt-1">Manage organizations</Link>
+            </div>
+          )}
+        </div>
         {sessions.length === 0 ? (
           <div className="h-[60vh] grid place-items-center text-neutral-500 text-sm">
             <div className="text-center">

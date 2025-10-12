@@ -60,6 +60,16 @@ export const setActiveOrgApi = createAsyncThunk('orgs/active', async (orgId: str
   return orgId
 })
 
+export const updateMemberRoleApi = createAsyncThunk('orgs/updateRole', async ({ orgId, memberId, role }: { orgId: string; memberId: string; role: 'admin' | 'member' }) => {
+  await api.post(`/orgs/${orgId}/members/${memberId}/role`, { role })
+  return { orgId, memberId, role }
+})
+
+export const removeMemberApi = createAsyncThunk('orgs/removeMember', async ({ orgId, memberId }: { orgId: string; memberId: string }) => {
+  await api.delete(`/orgs/${orgId}/members/${memberId}`)
+  return { orgId, memberId }
+})
+
 const orgsSlice = createSlice({
   name: 'orgs',
   initialState: restored ?? initialState,
@@ -129,6 +139,17 @@ const orgsSlice = createSlice({
       .addCase(inviteMemberApi.fulfilled, (state, action) => {
         const org = state.list.find((o) => o.id === action.payload.orgId)
         if (org) org.members.push({ id: action.payload.invite.id, email: action.payload.invite.email, role: 'invited' })
+        persist(state)
+      })
+      .addCase(updateMemberRoleApi.fulfilled, (state, action) => {
+        const org = state.list.find((o) => o.id === action.payload.orgId)
+        const m = org?.members.find((m) => m.id === action.payload.memberId)
+        if (m) m.role = action.payload.role
+        persist(state)
+      })
+      .addCase(removeMemberApi.fulfilled, (state, action) => {
+        const org = state.list.find((o) => o.id === action.payload.orgId)
+        if (org) org.members = org.members.filter((m) => m.id !== action.payload.memberId)
         persist(state)
       })
       .addCase(setActiveOrgApi.fulfilled, (state, action) => {

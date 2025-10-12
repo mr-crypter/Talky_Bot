@@ -106,10 +106,10 @@ export default function ChatView() {
                   <button
                     key={t}
                     onClick={() => handleSuggestion(t)}
-                    className="w-full text-left px-4 py-3 rounded-full border bg-white hover:bg-neutral-50 shadow-sm overflow-hidden"
+                    className="w-full text-left pl-5 pr-4 py-3 rounded-full border border-neutral-300 bg-white hover:bg-neutral-50 shadow-sm"
                   >
-                    <div className="flex items-center gap-2 text-sm text-neutral-700 w-full min-w-0">
-                      <span className="h-5 w-5 grid place-items-center text-indigo-600">
+                    <div className="flex items-center gap-3 text-sm text-neutral-700 w-full min-w-0">
+                      <span className="h-5 w-5 grid place-items-center text-indigo-600 shrink-0">
                         {/* chat bubble icon */}
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                           <path d="M21 12a7 7 0 0 1-7 7H9l-4 4v-4H6a7 7 0 0 1-7-7 7 7 0 0 1 7-7h8a7 7 0 0 1 7 7Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
