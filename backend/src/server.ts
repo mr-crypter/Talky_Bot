@@ -7,6 +7,7 @@ import http from 'http'
 import authRoutes from './routes/auth.js'
 import chatRoutes from './routes/chat.js'
 import notifRoutes from './routes/notifications.js'
+import orgRoutes from './routes/orgs.js'
 import { initSocket } from './socket/index.js'
 
 const app = express()
@@ -18,6 +19,7 @@ app.use(cookieParser())
 app.use('/api/auth', authRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/notifications', notifRoutes)
+app.use('/api/orgs', orgRoutes)
 
 const server = http.createServer(app)
 initSocket(server)

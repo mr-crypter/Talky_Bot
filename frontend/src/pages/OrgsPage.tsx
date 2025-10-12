@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { createOrg, inviteMember, renameOrg, setActiveOrg } from '../features/orgs/orgsSlice'
+import { createOrgApi, inviteMemberApi, loadOrgs, renameOrgApi, setActiveOrgApi } from '../features/orgs/orgsSlice'
 
 export default function OrgsPage() {
   const { list, activeOrgId } = useAppSelector((s) => s.orgs)
@@ -10,6 +10,10 @@ export default function OrgsPage() {
   const [invite, setInvite] = useState('')
 
   const active = list.find((o) => o.id === activeOrgId) || null
+
+  useEffect(() => {
+    dispatch(loadOrgs())
+  }, [dispatch])
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -21,7 +25,7 @@ export default function OrgsPage() {
             {list.map((o) => (
               <button
                 key={o.id}
-                onClick={() => dispatch(setActiveOrg(o.id))}
+                onClick={() => dispatch(setActiveOrgApi(o.id))}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded ${activeOrgId === o.id ? 'bg-indigo-50' : 'hover:bg-neutral-50'} border`}
               >
                 <span>{o.name}</span>
@@ -32,7 +36,7 @@ export default function OrgsPage() {
 
           <div className="mt-4 flex gap-2">
             <input className="flex-1 px-3 py-2 rounded border" placeholder="New organization name" value={newOrg} onChange={(e) => setNewOrg(e.target.value)} />
-            <button className="px-3 py-2 rounded bg-indigo-600 text-white" onClick={() => newOrg && (dispatch(createOrg(newOrg)), setNewOrg(''))}>Create</button>
+            <button className="px-3 py-2 rounded bg-indigo-600 text-white" onClick={() => newOrg && (dispatch(createOrgApi(newOrg)), setNewOrg(''))}>Create</button>
           </div>
         </div>
 
@@ -45,7 +49,7 @@ export default function OrgsPage() {
                 <label className="block text-sm mb-1">Rename</label>
                 <div className="flex gap-2">
                   <input className="flex-1 px-3 py-2 rounded border" placeholder={active.name} value={rename} onChange={(e) => setRename(e.target.value)} />
-                  <button className="px-3 py-2 rounded bg-neutral-900 text-white" onClick={() => rename && (dispatch(renameOrg({ id: active.id, name: rename })), setRename(''))}>Save</button>
+                  <button className="px-3 py-2 rounded bg-neutral-900 text-white" onClick={() => rename && (dispatch(renameOrgApi({ id: active.id, name: rename })), setRename(''))}>Save</button>
                 </div>
               </div>
 
@@ -53,7 +57,7 @@ export default function OrgsPage() {
                 <label className="block text-sm mb-1">Invite Member by Email</label>
                 <div className="flex gap-2">
                   <input className="flex-1 px-3 py-2 rounded border" placeholder="email@example.com" value={invite} onChange={(e) => setInvite(e.target.value)} />
-                  <button className="px-3 py-2 rounded bg-indigo-600 text-white" onClick={() => invite && (dispatch(inviteMember(active.id, invite)), setInvite(''))}>Invite</button>
+                  <button className="px-3 py-2 rounded bg-indigo-600 text-white" onClick={() => invite && (dispatch(inviteMemberApi({ orgId: active.id, email: invite })), setInvite(''))}>Invite</button>
                 </div>
               </div>
 

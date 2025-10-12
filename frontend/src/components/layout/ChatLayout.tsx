@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Outlet, Link } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { createSession, setActiveSession, fetchMessages } from '../../features/chat/chatSlice'
 import { togglePanel } from '../../features/notifications/notificationsSlice'
@@ -14,6 +14,18 @@ export default function ChatLayout() {
   const activeId = useAppSelector((s) => s.chat.activeSessionId)
   const credits = useAppSelector((s) => s.auth.credits)
   const user = useAppSelector((s) => s.auth.user)
+  const [collapsed, setCollapsed] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
 
   useEffect(() => {
     dispatch(fetchSessions())
@@ -29,9 +41,9 @@ export default function ChatLayout() {
   }, [dispatch])
 
   return (
-    <div className="h-dvh grid grid-cols-[300px_1fr] grid-rows-[64px_1fr] bg-white">
+    <div className={`relative h-dvh grid ${collapsed ? 'grid-cols-[0_1fr]' : 'grid-cols-[300px_1fr]'} grid-rows-[64px_1fr] bg-white transition-[grid-template-columns] duration-300 ease-in-out`}>
       {/* Top bar */}
-      <header className="col-span-2 flex items-center justify-between gap-4 px-4 border-b bg-white sticky top-0 h-16">
+      <header className="col-span-2 flex items-center justify-between gap-4 px-4 border-b bg-white sticky top-0 h-16 z-40">
         <div className="font-semibold">AI Chat</div>
         <div className="flex items-center gap-3">
           <div className="inline-flex items-center gap-2 text-sm px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
@@ -47,34 +59,64 @@ export default function ChatLayout() {
             </svg>
             <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full bg-indigo-600 text-white text-[10px] grid place-items-center">1</span>
           </button>
-          <button className="inline-flex items-center gap-2 pl-2 pr-1 h-9 rounded-full bg-indigo-600 text-white">
-            <span className="h-7 w-7 rounded-full bg-white/20 grid place-items-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6 8a6 6 0 0 0-12 0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <div className="relative" ref={menuRef}>
+            <button onClick={() => setMenuOpen((v) => !v)} className="inline-flex items-center gap-2 pl-2 pr-1 h-9 rounded-full bg-indigo-600 text-white active:scale-[.98] transition-transform duration-150">
+              <span className="h-7 w-7 rounded-full bg-white/20 grid place-items-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6 8a6 6 0 0 0-12 0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="pr-1 text-sm hidden sm:inline">{user?.email ?? 'User'}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="opacity-90">
+                <path d="M6 9l6 6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </span>
-            <span className="pr-1 text-sm hidden sm:inline">{user?.email ?? 'User'}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="opacity-90">
-              <path d="M6 9l6 6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+            </button>
+            {menuOpen && (
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-white shadow-xl p-2 z-[100] origin-top-right transition-all duration-200 ease-out">
+              <div className="flex items-center gap-2 px-3 py-2 text-neutral-500">
+                <span className="h-6 w-6 rounded-full bg-neutral-100 grid place-items-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6 8a6 6 0 0 0-12 0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+                <span className="text-sm truncate">{user?.email ?? 'User'}</span>
+              </div>
+              <Link to="/settings" className="flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-50">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .69.28 1.32.73 1.77.45.45 1.08.73 1.77.73H21a2 2 0 1 1 0 4h-.09c-.69 0-1.32.28-1.77.73Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span className="text-sm">Settings</span>
+              </Link>
+              <button onClick={() => window.location.assign('/login')} className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-50 text-left">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 17l5-5-5-5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span className="text-sm">Sign Out</span>
+              </button>
+            </div>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Sidebar */}
-      <aside className="border-r p-4 overflow-y-auto bg-white">
+      <aside className={`border-r p-4 overflow-y-auto bg-white transition-[width] duration-300 ease-in-out ${collapsed ? 'w-0 p-0 overflow-hidden' : ''}`}>
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-medium text-neutral-700">Conversations</div>
-          <button className="p-1 text-neutral-500" aria-label="Collapse sidebar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <button className="p-1 text-neutral-500" aria-label="Toggle sidebar" onClick={() => setCollapsed((v) => !v)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d={collapsed ? 'M9 6l6 6-6 6' : 'M15 18l-6-6 6-6'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </button>
         </div>
         <button
           onClick={() => dispatch(createSession('New Chat'))}
-          className="w-full mb-4 inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 shadow"
+          className="w-full mb-4 inline-flex items-center justify-center gap-2 h-10 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[.98] transition-all duration-150 shadow"
         >
           <span className="inline-grid place-items-center h-6 w-6 rounded bg-white/20">+</span>
           <span className="font-medium">New Chat</span>
+        </button>
+        <button className="w-full mb-4 inline-flex items-center justify-center gap-2 h-10 rounded-lg border hover:bg-neutral-100 shadow">
+          <Link to="/orgs" className="flex items-center w-full h-full justify-center gap-2">
+            <span className="inline-grid place-items-center h-6 w-6 rounded bg-white/20">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 15l-6-6-6 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </span>
+            <span className="font-medium">Organizations</span>
+          </Link>
         </button>
         {sessions.length === 0 ? (
           <div className="h-[60vh] grid place-items-center text-neutral-500 text-sm">
@@ -97,7 +139,7 @@ export default function ChatLayout() {
                   dispatch(setActiveSession(s.id))
                   dispatch(fetchMessages(s.id))
                 }}
-                className={`w-full text-left px-3 py-2 rounded ${activeId === s.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-neutral-100'} transition`}
+                className={`w-full text-left px-3 py-2 rounded ${activeId === s.id ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-neutral-100'} transition-colors duration-150`}
               >
                 <div className="truncate">{s.title}</div>
                 <div className="text-xs text-neutral-500">{new Date(s.updatedAt).toLocaleString()}</div>
@@ -112,6 +154,19 @@ export default function ChatLayout() {
         <Outlet />
         <NotificationPanel />
       </main>
+
+      {/* Reopen button when collapsed */}
+      {collapsed && (
+        <button
+          aria-label="Open sidebar"
+          onClick={() => setCollapsed(false)}
+          className="absolute left-2 top-20 z-50 h-8 w-8 rounded-full bg-indigo-600 text-white shadow hover:bg-indigo-500 grid place-items-center"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M9 6l6 6-6 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
     </div>
   )
 }

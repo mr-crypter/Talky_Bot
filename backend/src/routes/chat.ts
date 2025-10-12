@@ -42,7 +42,7 @@ r.post('/sessions/:id/message', async (req, res) => {
   const ok = await q('select 1 from chat_sessions where id=$1 and user_id=$2', [id, uid])
   if (!ok.rowCount) return res.status(404).json({ error: 'not_found' })
 
-  if (!(await requireCredits(uid))) return res.status(402).json({ error: 'insufficient_credits' })
+  if (!(await requireCredits(uid, 10))) return res.status(402).json({ error: 'insufficient_credits' })
 
   await q('insert into chat_messages (session_id, role, content) values ($1,$2,$3)', [id, 'user', content])
 
@@ -58,7 +58,8 @@ r.post('/sessions/:id/message', async (req, res) => {
     [content, id],
   )
 
-  res.json({ content: text })
+  const credits = (await q('select credits from users where id=$1', [uid])).rows[0]?.credits ?? 0
+  res.json({ content: text, credits })
 })
 
 export default r

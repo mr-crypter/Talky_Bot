@@ -62,10 +62,14 @@ const authSlice = createSlice({
       state.credits += action.payload
       localStorage.setItem('credits', String(state.credits))
     },
+    setCredits: (state, action: PayloadAction<number>) => {
+      state.credits = Math.max(0, action.payload)
+      localStorage.setItem('credits', String(state.credits))
+    },
   },
 })
 
-export const { loginSuccess, logout, restore, deductCredits, addCredits } = authSlice.actions
+export const { loginSuccess, logout, restore, deductCredits, addCredits, setCredits } = authSlice.actions
 export default authSlice.reducer
 
 

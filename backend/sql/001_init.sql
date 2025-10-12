@@ -9,6 +9,7 @@ create table if not exists users (
   google_id text unique,
   onboarded boolean not null default false,
   credits integer not null default 2000,
+  active_org_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -57,6 +58,15 @@ create table if not exists notifications (
   body text not null,
   created_at timestamptz not null default now(),
   seen boolean not null default false
+);
+
+create table if not exists org_invites (
+  id uuid primary key default uuid_generate_v4(),
+  org_id uuid not null references orgs(id) on delete cascade,
+  email text not null,
+  invited_by uuid not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  accepted boolean not null default false
 );
 
 create table if not exists credits_ledger (

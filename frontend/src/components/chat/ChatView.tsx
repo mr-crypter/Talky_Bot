@@ -12,6 +12,8 @@ export default function ChatView() {
 
   const session = useMemo(() => sessions.find((s) => s.id === activeSessionId) ?? sessions[0] ?? null, [sessions, activeSessionId])
   const messages = session?.messages ?? []
+  const [copiedMap, setCopiedMap] = useState<Record<string, boolean>>({})
+  const [voteMap, setVoteMap] = useState<Record<string, 'up' | 'down' | null>>({})
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
@@ -40,10 +42,31 @@ export default function ChatView() {
       // insufficient credits or failure
       // no-op UI; the typing indicator will stop
     }
+    if (sendMessageApi.fulfilled.match(result)) {
+      const credits = (result.payload as any).credits as number | undefined
+      if (typeof credits === 'number') {
+        // Update top bar credits via auth slice
+        // Lazy import to avoid extra wiring here
+        const { setCredits } = await import('../../features/auth/authSlice')
+        dispatch(setCredits(credits))
+      }
+    }
   }
 
   const handleSuggestion = (prompt: string) => {
     void send(prompt)
+  }
+
+  const handleCopy = async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedMap((m) => ({ ...m, [id]: true }))
+      setTimeout(() => setCopiedMap((m) => ({ ...m, [id]: false })), 2000)
+    } catch {}
+  }
+
+  const handleVote = (id: string, dir: 'up' | 'down') => {
+    setVoteMap((m) => ({ ...m, [id]: m[id] === dir ? null : dir }))
   }
 
   return (
@@ -89,11 +112,45 @@ export default function ChatView() {
           <div className="space-y-4 max-w-3xl mx-auto p-4 sm:p-6">
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`px-4 py-2 rounded-2xl shadow ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white'} max-w-[90%] sm:max-w-[80%] prose prose-sm ${m.role === 'user' ? 'prose-invert' : ''}`}>
-                  {m.role === 'assistant' ? (
-                    <ReactMarkdown>{m.content}</ReactMarkdown>
-                  ) : (
-                    <div>{m.content}</div>
+                <div className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%] sm:max-w-[80%]`}>
+                  <div className={`px-4 py-2 rounded-2xl shadow ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white'} prose prose-sm ${m.role === 'user' ? 'prose-invert' : ''}`}>
+                    {m.role === 'assistant' ? (
+                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                    ) : (
+                      <div>{m.content}</div>
+                    )}
+                  </div>
+                  {m.role === 'assistant' && (
+                    <div className="mt-2 ml-2 flex items-center gap-5 text-indigo-600">
+                      <button
+                        aria-label={copiedMap[m.id] ? 'Copied' : 'Copy'}
+                        className={`inline-flex items-center hover:opacity-80 ${copiedMap[m.id] ? 'text-emerald-600' : 'text-indigo-600'}`}
+                        onClick={() => handleCopy(m.id, m.content)}
+                      >
+                        {copiedMap[m.id] ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 13l4 4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeWidth="2"/></svg>
+                        )}
+                      </button>
+                      <button
+                        aria-label="Upvote"
+                        className={`inline-flex items-center hover:opacity-80 ${voteMap[m.id] === 'up' ? 'text-emerald-600' : 'text-indigo-600'}`}
+                        onClick={() => handleVote(m.id, 'up')}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 9V5a3 3 0 0 0-3-3l-3 9H5a3 3 0 0 0-3 3v1a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V9z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <button
+                        aria-label="Downvote"
+                        className={`inline-flex items-center hover:opacity-80 ${voteMap[m.id] === 'down' ? 'text-rose-600' : 'text-indigo-600'}`}
+                        onClick={() => handleVote(m.id, 'down')}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 15v4a3 3 0 0 0 3 3l3-9h3a3 3 0 0 0 3-3v-1a3 3 0 0 0-3-3H12a3 3 0 0 0-3 3v6z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <button aria-label="More actions" className="hover:opacity-80">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -136,7 +193,7 @@ export default function ChatView() {
                 disabled={credits <= 0}
                 rows={1}
               />
-              <button onClick={() => send()} disabled={credits <= 0 || isSending} className="h-full bg-indigo-600 text-white disabled:opacity-50 grid place-items-center">
+              <button onClick={() => send()} disabled={credits < 10 || isSending} className="h-full bg-indigo-600 text-white disabled:opacity-50 grid place-items-center">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 2L11 13" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M22 2l-7 20-4-9-9-4 20-7Z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>

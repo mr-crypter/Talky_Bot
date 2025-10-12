@@ -6,6 +6,7 @@ export type Notification = {
   body?: string
   createdAt: number
   read: boolean
+  variant?: 'success' | 'info' | 'warning' | 'error'
 }
 
 type NotificationsState = {
@@ -38,8 +39,8 @@ const notificationsSlice = createSlice({
         state.list.unshift(action.payload)
         persist(state)
       },
-      prepare: (title: string, body?: string) => ({
-        payload: { id: nanoid(), title, body, createdAt: Date.now(), read: false } as Notification,
+      prepare: (title: string, body?: string, variant: Notification['variant'] = 'info') => ({
+        payload: { id: nanoid(), title, body, createdAt: Date.now(), read: false, variant } as Notification,
       }),
     },
     markRead: (state, action: PayloadAction<string>) => {
@@ -51,6 +52,10 @@ const notificationsSlice = createSlice({
     togglePanel: (state, action?: PayloadAction<boolean | undefined>) => {
       state.panelOpen = action?.payload ?? !state.panelOpen
     },
+    markAllRead: (state) => {
+      state.list.forEach((n) => (n.read = true))
+      persist(state)
+    },
     clearAll: (state) => {
       state.list = []
       persist(state)
@@ -58,7 +63,7 @@ const notificationsSlice = createSlice({
   },
 })
 
-export const { pushNotification, markRead, togglePanel, clearAll } = notificationsSlice.actions
+export const { pushNotification, markRead, togglePanel, markAllRead, clearAll } = notificationsSlice.actions
 export default notificationsSlice.reducer
 
 

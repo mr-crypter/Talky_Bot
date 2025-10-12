@@ -1,4 +1,5 @@
-import { createSlice, nanoid, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, nanoid, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
+import { api } from '../../lib/api'
 
 export type Member = {
   id: string
@@ -33,6 +34,31 @@ function restore(): OrgsState | null {
 }
 
 const restored = restore()
+
+export const loadOrgs = createAsyncThunk('orgs/load', async () => {
+  const { data } = await api.get('/orgs')
+  return data as { orgs: Organization[]; activeOrgId: string | null }
+})
+
+export const createOrgApi = createAsyncThunk('orgs/create', async (name: string) => {
+  const { data } = await api.post('/orgs', { name })
+  return data as { id: string; name: string }
+})
+
+export const renameOrgApi = createAsyncThunk('orgs/rename', async ({ id, name }: { id: string; name: string }) => {
+  await api.post(`/orgs/${id}/rename`, { name })
+  return { id, name }
+})
+
+export const inviteMemberApi = createAsyncThunk('orgs/invite', async ({ orgId, email }: { orgId: string; email: string }) => {
+  const { data } = await api.post(`/orgs/${orgId}/invite`, { email })
+  return { orgId, invite: data as any }
+})
+
+export const setActiveOrgApi = createAsyncThunk('orgs/active', async (orgId: string) => {
+  await api.post('/orgs/active', { orgId })
+  return orgId
+})
 
 const orgsSlice = createSlice({
   name: 'orgs',
@@ -82,6 +108,33 @@ const orgsSlice = createSlice({
       org.members = org.members.filter((m) => m.id !== action.payload.memberId)
       persist(state)
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(loadOrgs.fulfilled, (state, action) => {
+        state.list = action.payload.orgs
+        state.activeOrgId = action.payload.activeOrgId
+        persist(state)
+      })
+      .addCase(createOrgApi.fulfilled, (state, action) => {
+        state.list.push({ id: action.payload.id, name: action.payload.name, members: [] })
+        state.activeOrgId = action.payload.id
+        persist(state)
+      })
+      .addCase(renameOrgApi.fulfilled, (state, action) => {
+        const org = state.list.find((o) => o.id === action.payload.id)
+        if (org) org.name = action.payload.name
+        persist(state)
+      })
+      .addCase(inviteMemberApi.fulfilled, (state, action) => {
+        const org = state.list.find((o) => o.id === action.payload.orgId)
+        if (org) org.members.push({ id: action.payload.invite.id, email: action.payload.invite.email, role: 'invited' })
+        persist(state)
+      })
+      .addCase(setActiveOrgApi.fulfilled, (state, action) => {
+        state.activeOrgId = action.payload
+        persist(state)
+      })
   },
 })
 

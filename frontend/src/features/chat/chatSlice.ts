@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, nanoid, PayloadAction } from '@reduxjs/toolkit'
 import { api } from '../../lib/api'
+import { setCredits } from '../auth/authSlice'
 
 export type Role = 'user' | 'assistant' | 'system'
 
@@ -89,7 +90,7 @@ export const sendMessageApi = createAsyncThunk(
   async ({ sessionId, content }: { sessionId: string; content: string }, { rejectWithValue }) => {
     try {
       const { data } = await api.post(`/chat/sessions/${sessionId}/message`, { content })
-      return { sessionId, assistant: data.content as string }
+      return { sessionId, assistant: data.content as string, credits: data.credits as number }
     } catch (e: any) {
       if (e?.response?.status === 402) return rejectWithValue('insufficient_credits')
       return rejectWithValue('send_failed')

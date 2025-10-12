@@ -8,6 +8,7 @@ import RequireAuth from './routes/RequireAuth'
 import ChatLayout from './components/layout/ChatLayout'
 import OrgsPage from './pages/OrgsPage.tsx'
 import ChatView from './components/chat/ChatView'
+import Settings from './pages/Settings'
 
 export default function App() {
   const dispatch = useAppDispatch()
@@ -21,6 +22,7 @@ export default function App() {
           <Route index element={<ChatView />} />
         </Route>
         <Route path="/orgs" element={<OrgsPage />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
