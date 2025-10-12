@@ -1,6 +1,6 @@
-import { createAsyncThunk, createSlice, nanoid, PayloadAction } from '@reduxjs/toolkit'
+import { createAsyncThunk, createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
 import { api } from '../../lib/api'
-import { setCredits } from '../auth/authSlice'
+// import { setCredits } from '../auth/authSlice'
 
 export type Role = 'user' | 'assistant' | 'system'
 

@@ -1,4 +1,4 @@
-import { createSlice, nanoid, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
 
 export type Notification = {
   id: string

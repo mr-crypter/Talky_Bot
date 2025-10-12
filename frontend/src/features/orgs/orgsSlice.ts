@@ -1,4 +1,4 @@
-import { createSlice, nanoid, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
+import { createSlice, nanoid, type PayloadAction, createAsyncThunk } from '@reduxjs/toolkit'
 import { api } from '../../lib/api'
 
 export type Member = {
