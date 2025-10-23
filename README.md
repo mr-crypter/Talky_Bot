@@ -1,4 +1,4 @@
-# True Gradient – Full‑Stack LLM Chat Platform
+#  Full‑Stack LLM Chat Platform
 
 Production‑ready LLM chat starter with authentication (email/password + Google), onboarding (default org + admin), ChatGPT‑style UI, organization management, credit‑based chat (Gemini), and real‑time notifications. Frontend runs on Vercel, backend on Render, database on PostgreSQL (e.g., Supabase).
 
